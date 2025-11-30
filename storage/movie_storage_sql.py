@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, text
 DB_URL = "sqlite:///data/movies.db"
 
 # Create the engine (echo=True so we see the SQL in the console)
-engine = create_engine(DB_URL, echo=True)
+engine = create_engine(DB_URL, echo=False)
 
 # Create the table if it does not exist
 with engine.connect() as connection:
@@ -27,9 +27,10 @@ with engine.connect() as connection:
             year INTEGER NOT NULL,
             rating REAL NOT NULL,
             poster TEXT,
+            note TEXT,
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE (user_id, title)
-        )
+            )
     """))
 
     connection.commit()
@@ -73,30 +74,41 @@ def list_movies(user_id):
     """Return all movies for a specific user."""
     with engine.connect() as connection:
         result = connection.execute(
-            text("SELECT title, year, rating, poster FROM movies WHERE user_id = :uid"),
+            text("""
+                SELECT title, year, rating, poster, note
+                FROM movies
+                WHERE user_id = :uid
+            """),
             {"uid": user_id}
         )
         rows = result.fetchall()
 
     return {
-        row[0]: {"year": row[1], "rating": row[2], "poster": row[3]}
+        row[0]: {
+            "year": row[1],
+            "rating": row[2],
+            "poster": row[3],
+            "note": row[4],
+        }
         for row in rows
     }
 
 
-def add_movie(user_id, title, year, rating, poster=None):
+def add_movie(user_id, title, year, rating, poster=None, note=None):
+    """Add a new movie for a specific user."""
     with engine.connect() as connection:
         connection.execute(
             text("""
-                INSERT INTO movies (user_id, title, year, rating, poster)
-                VALUES (:uid, :title, :year, :rating, :poster)
+                INSERT INTO movies (user_id, title, year, rating, poster, note)
+                VALUES (:uid, :title, :year, :rating, :poster, :note)
             """),
             {
                 "uid": user_id,
                 "title": title,
                 "year": year,
                 "rating": rating,
-                "poster": poster
+                "poster": poster,
+                "note": note,
             }
         )
         connection.commit()
@@ -111,14 +123,17 @@ def delete_movie(user_id, title):
         connection.commit()
 
 
-def update_movie(user_id, title, rating):
+def update_movie(user_id, title, note):
+    """Update the note for a specific movie belonging to a user."""
     with engine.connect() as connection:
-        connection.execute(
+        result = connection.execute(
             text("""
                 UPDATE movies
-                SET rating = :rating
+                SET note = :note
                 WHERE user_id = :uid AND title = :title
             """),
-            {"uid": user_id, "title": title, "rating": rating}
+            {"uid": user_id, "title": title, "note": note}
         )
         connection.commit()
+
+        return result.rowcount  # how many rows updated

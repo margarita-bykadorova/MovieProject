@@ -137,7 +137,7 @@ def select_user():
         users = movie_storage.list_users()
 
         if not users:
-            print("No users found. Let's create your profile.\n")
+            print(Fore.CYAN + "No users found. Let's create your profile.\n")
             name = get_nonempty_string("Enter user name: ")
             user_id = movie_storage.create_user(name)
             active_user_id = user_id
@@ -285,9 +285,10 @@ def delete_movie():
 
 
 def update_movie():
-    """Update the rating of an existing movie
-    by prompting the user for its title and a new rating."""
-
+    """
+    Update the note of an existing movie by prompting the user
+    for its title and a new note.
+    """
     movies = movie_storage.list_movies(active_user_id)
     if not movies:
         print(Fore.RED + "No movies in the database yet.\n")
@@ -298,15 +299,17 @@ def update_movie():
         if title.lower() == "q":
             print(Fore.YELLOW + "Cancelled.\n")
             break
+
         if title in movies:
-            rating = get_valid_float(
-                f"Enter new rating ({MIN_RATING}–{MAX_RATING}): ",
-                MIN_RATING,
-                MAX_RATING
-            )
-            movie_storage.update_movie(active_user_id, title, round(rating, 1))
-            print(Fore.MAGENTA + f"\nMovie '{title}' updated successfully 🎉\n")
+            note = get_nonempty_string("Enter movie note: ")
+            rows = movie_storage.update_movie(active_user_id, title, note)
+
+            if rows > 0:
+                print(Fore.MAGENTA + f"\nMovie '{title}' successfully updated with a note 📝\n")
+            else:
+                print(Fore.RED + f"\nMovie '{title}' could not be updated.\n")
             break
+
         print(Fore.RED + f"\nMovie '{title}' not found ❌")
 
 
@@ -397,23 +400,26 @@ def sort_by_rating():
 def _generate_movie_grid_html(movies):
     """
     Build the HTML for all movies to insert into __TEMPLATE_MOVIE_GRID__.
-    `movies` is the dict returned by movie_storage.get_movies().
+    `movies` is the dict returned by movie_storage.list_movies(active_user_id).
     """
     items = []
 
     for title, info in movies.items():
         year = info["year"]
         rating = info["rating"]
-        rating_str = f"{rating:.1f}"
         poster_url = info.get("poster") or ""
+        note = info.get("note") or ""
+
+        # If note exists, use it as a tooltip (title attribute) on the poster
+        title_attr = f' title="{note}"' if note else ""
 
         item_html = f"""
         <li>
             <div class="movie">
-                <img class="movie-poster" src="{poster_url}" alt="Poster for {title}">
+                <img class="movie-poster" src="{poster_url}" alt="Poster for {title}"{title_attr}>
                 <div class="movie-title">{title}</div>
                 <div class="movie-year">{year}</div>
-                <div class="movie-year">Rating: {rating_str}</div>
+                <div class="movie-year">Rating: {rating}</div>
             </div>
         </li>
         """
@@ -467,7 +473,7 @@ def main():
     """Run the main loop of the Movies Database application:
     select user, then display the menu, process choices, and manage movie data."""
 
-    print("🎬 Welcome to My Movies Database!")
+    print(Fore.CYAN + "🎬 Welcome to My Movies Database!")
     select_user()
 
     while True:
