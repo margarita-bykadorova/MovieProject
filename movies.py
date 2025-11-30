@@ -1,10 +1,12 @@
 """
 Movies Database Application
 
-A console-based Python program that allows users to manage a personal movie collection.
-Users can list, add, delete, update, and search for movies, view statistics, or generate
-a rating histogram saved as an image file. The data is stored in memory while the
-program is running, and all user interactions are handled through a simple text menu.
+Console-based Python program to manage a personal movie collection.
+Features:
+- SQL-based storage using SQLite
+- Movie data fetched from the OMDb API
+- CLI for listing, adding, deleting, updating, searching, and analyzing movies
+- Static website generation (HTML + CSS) showing the movie library
 """
 
 import sys
@@ -63,19 +65,6 @@ def get_valid_float(prompt, min_value, max_value):
             return value
         except ValueError:
             print(Fore.RED + "Invalid input. Please enter a number.")
-
-
-def get_optional_number(prompt, cast_type):
-    """Ask the user for a number or allow them to leave it blank."""
-
-    while True:
-        value = input(Fore.GREEN + prompt).strip()
-        if value == "":
-            return None  # user skipped the filter
-        try:
-            return cast_type(value)  # convert to int or float depending on the case
-        except ValueError:
-            print(Fore.RED + "Invalid input. Please enter a valid number or leave blank.")
 
 
 # ------------------ menu helpers ------------------
@@ -274,33 +263,21 @@ def update_movie():
 
 
 def stats():
-    """Calculate and display movie statistics including the average,
-    median, highest, and lowest ratings. Also list the best and worst
-    movies based on their ratings."""
-
+    """Calculate and display movie statistics."""
     movies = movie_storage.get_movies()
     if not movies:
         print(Fore.RED + "No movies in the database yet.\n")
         return
 
-    ratings = []
-    for info in movies.values():
-        ratings.append(info["rating"])
+    ratings = [info["rating"] for info in movies.values()]
 
     average = statistics.mean(ratings)
     median = statistics.median(ratings)
     max_rating = max(ratings)
     min_rating = min(ratings)
 
-    best_movies = []
-    for movie, info in movies.items():
-        if info["rating"] == max_rating:
-            best_movies.append(movie)
-
-    worst_movies = []
-    for movie, info in movies.items():
-        if info["rating"] == min_rating:
-            worst_movies.append(movie)
+    best_movies = [movie for movie, info in movies.items() if info["rating"] == max_rating]
+    worst_movies = [movie for movie, info in movies.items() if info["rating"] == min_rating]
 
     print(f"\n📊 {Fore.YELLOW}Average rating: {average:.1f}")
     print(f"📈 {Fore.YELLOW}Median rating: {median:.1f}")
@@ -379,6 +356,7 @@ def _generate_movie_grid_html(movies):
     for title, info in movies.items():
         year = info["year"]
         rating = info["rating"]
+        rating_str = f"{rating:.1f}"
         poster_url = info.get("poster") or ""
 
         item_html = f"""
@@ -387,7 +365,7 @@ def _generate_movie_grid_html(movies):
                 <img class="movie-poster" src="{poster_url}" alt="Poster for {title}">
                 <div class="movie-title">{title}</div>
                 <div class="movie-year">{year}</div>
-                <div class="movie-year">Rating: {rating}</div>
+                <div class="movie-year">Rating: {rating_str}</div>
             </div>
         </li>
         """
