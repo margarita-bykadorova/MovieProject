@@ -14,7 +14,7 @@ import statistics
 import random
 import difflib
 from colorama import Fore, init
-import movie_storage_sql as movie_storage
+from storage import movie_storage_sql as movie_storage
 import movie_api
 init(autoreset=True)
 
