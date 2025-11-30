@@ -25,6 +25,8 @@ MAX_RATING = 10
 MIN_MENU_CHOICE = 0
 MAX_MENU_CHOICE = 9
 
+active_user_id = None
+active_user_name = ""
 
 # ------------------ input helpers ------------------
 
@@ -124,6 +126,52 @@ def press_enter_to_continue():
     input()  # just to fix a bug with Enter not working properly
 
 
+def select_user():
+    """
+    Let the user select an existing profile or create a new one.
+    Sets global active_user_id and active_user_name.
+    """
+    global active_user_id, active_user_name
+
+    while True:
+        users = movie_storage.list_users()
+
+        if not users:
+            print("No users found. Let's create your profile.\n")
+            name = get_nonempty_string("Enter user name: ")
+            user_id = movie_storage.create_user(name)
+            active_user_id = user_id
+            active_user_name = name
+            print(f"\nWelcome, {name}! 🎬\n")
+            return
+
+        print(Fore.CYAN + "\n🎬 Select a user profile:\n")
+        for idx, (uid, name) in enumerate(users, start=1):
+            print(Fore.YELLOW + f"{idx}. {name}")
+        print(Fore.YELLOW + f"{len(users) + 1}. Create new user")
+
+        choice = get_valid_int(
+            f"Enter choice (1-{len(users) + 1}): ",
+            1,
+            len(users) + 1
+        )
+
+        if choice == len(users) + 1:
+            # Create new user
+            name = get_nonempty_string("Enter new user name: ")
+            user_id = movie_storage.create_user(name)
+            active_user_id = user_id
+            active_user_name = name
+            print(Fore.MAGENTA + f"\nWelcome, {name}! 🎬\n")
+            return
+        else:
+            # Existing user
+            uid, name = users[choice - 1]
+            active_user_id = uid
+            active_user_name = name
+            print(Fore.MAGENTA + f"\nWelcome back, {name}! 🎬\n")
+            return
+
 # ------------------ movie functions ------------------
 
 def exit_program():
@@ -137,7 +185,7 @@ def list_movies():
     """Display all movies in the database, showing each title,
     release year, and rating."""
 
-    movies = movie_storage.get_movies()
+    movies = movie_storage.list_movies(active_user_id)
     if not movies:
         print(Fore.RED + "No movies in the database yet.\n")
         return
@@ -155,7 +203,7 @@ def add_movie():
     Add a new movie using the OMDb API.
     The user only enters the title; year, rating and poster URL are fetched.
     """
-    movies = movie_storage.get_movies()
+    movies = movie_storage.list_movies(active_user_id)
     title = get_nonempty_string("\nEnter movie title: ")
 
     if title in movies:
@@ -212,14 +260,14 @@ def add_movie():
         poster_url = None  # we can still store movie without poster
 
     # Save to database (note: add_movie now accepts poster=None by default)
-    movie_storage.add_movie(api_title, year, round(rating, 1), poster_url)
+    movie_storage.add_movie(active_user_id, api_title, year, round(rating, 1), poster_url)
     print(Fore.MAGENTA + f"\nMovie '{api_title}' added successfully from OMDb 🎉\n")
 
 
 def delete_movie():
     """Delete an existing movie by title, giving the user a chance to retry if not found."""
 
-    movies = movie_storage.get_movies()
+    movies = movie_storage.list_movies(active_user_id)
     if not movies:
         print(Fore.RED + "No movies in the database yet.\n")
         return
@@ -230,7 +278,7 @@ def delete_movie():
             print(Fore.YELLOW + "Cancelled.\n")
             break
         if title in movies:
-            movie_storage.delete_movie(title)
+            movie_storage.delete_movie(active_user_id, title)
             print(Fore.MAGENTA + f"\nMovie '{title}' deleted ✅\n")
             break
         print(Fore.RED + f"\nMovie '{title}' not found 👀")
@@ -240,7 +288,7 @@ def update_movie():
     """Update the rating of an existing movie
     by prompting the user for its title and a new rating."""
 
-    movies = movie_storage.get_movies()
+    movies = movie_storage.list_movies(active_user_id)
     if not movies:
         print(Fore.RED + "No movies in the database yet.\n")
         return
@@ -256,7 +304,7 @@ def update_movie():
                 MIN_RATING,
                 MAX_RATING
             )
-            movie_storage.update_movie(title, round(rating, 1))
+            movie_storage.update_movie(active_user_id, title, round(rating, 1))
             print(Fore.MAGENTA + f"\nMovie '{title}' updated successfully 🎉\n")
             break
         print(Fore.RED + f"\nMovie '{title}' not found ❌")
@@ -264,7 +312,7 @@ def update_movie():
 
 def stats():
     """Calculate and display movie statistics."""
-    movies = movie_storage.get_movies()
+    movies = movie_storage.list_movies(active_user_id)
     if not movies:
         print(Fore.RED + "No movies in the database yet.\n")
         return
@@ -290,7 +338,7 @@ def random_movie():
     """Select and display a random movie from the database,
     along with its rating."""
 
-    movies = movie_storage.get_movies()
+    movies = movie_storage.list_movies(active_user_id)
     if not movies:
         print(Fore.RED + "No movies in the database yet.\n")
         return
@@ -302,7 +350,7 @@ def search_movie():
     """Search for a movie by title or partial match.
     If not found, suggest similar titles using fuzzy matching."""
 
-    movies = movie_storage.get_movies()
+    movies = movie_storage.list_movies(active_user_id)
     if not movies:
         print(Fore.RED + "No movies in the database yet.\n")
         return
@@ -329,7 +377,7 @@ def sort_by_rating():
     """Display all movies sorted by rating in descending order,
     showing their title, release year, and rating."""
 
-    movies = movie_storage.get_movies()
+    movies = movie_storage.list_movies(active_user_id)
     if not movies:
         print(Fore.RED + "No movies in the database yet.")
         return
@@ -376,9 +424,11 @@ def _generate_movie_grid_html(movies):
 
 def generate_website():
     """
-    Generate the HTML website from the template and save it as _static/index.html.
+    Generate the HTML website from the template and save it as
+    _static/<username>.html for the currently active user.
     """
-    movies = movie_storage.get_movies()
+    # Get movies for the active user only
+    movies = movie_storage.list_movies(active_user_id)
 
     # 1. Read the template file
     try:
@@ -398,21 +448,30 @@ def generate_website():
         .replace("__TEMPLATE_MOVIE_GRID__", movie_grid_html)
     )
 
-    # 4. Write the final HTML file into _static/
-    with open("_static/index.html", "w", encoding="utf-8") as f:
+    # 4. Build a per-user output filename, e.g. _static/John.html
+    safe_name = active_user_name.strip() or "index"
+    safe_name = safe_name.replace(" ", "_")
+    output_path = f"_static/{safe_name}.html"
+
+    # 5. Write the final HTML file
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_content)
 
-    print("\nWebsite was generated successfully.\n")
+    print(Fore.MAGENTA + f"\nWebsite for {active_user_name} was generated successfully! 🚀")
+    print(Fore.CYAN + f"Saved to: {output_path}\n")
 
 
 # ------------------ main ------------------
 
 def main():
     """Run the main loop of the Movies Database application:
-    display the menu, process user choices, and manage movie data."""
+    select user, then display the menu, process choices, and manage movie data."""
 
     print("🎬 Welcome to My Movies Database!")
+    select_user()
+
     while True:
+        print(Fore.GREEN + f"\n👤 Current user: {active_user_name}")
         choice = show_menu()
         handle_choice(choice)
         press_enter_to_continue()
