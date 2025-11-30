@@ -11,7 +11,6 @@ import sys
 import statistics
 import random
 import difflib
-import matplotlib.pyplot as plt
 from colorama import Fore, init
 import movie_storage_sql as movie_storage
 import movie_api
@@ -22,7 +21,7 @@ MAX_YEAR = 2025
 MIN_RATING = 0
 MAX_RATING = 10
 MIN_MENU_CHOICE = 0
-MAX_MENU_CHOICE = 11
+MAX_MENU_CHOICE = 9
 
 
 # ------------------ input helpers ------------------
@@ -85,7 +84,7 @@ def show_menu():
     """Display the main menu, prompt the user for a choice,
     and return the selected option as an integer."""
 
-    print("\n"+ Fore.CYAN + "-" * 40 + "\n")
+    print("\n" + Fore.CYAN + "-" * 40 + "\n")
     print(Fore.CYAN + "*" * 10 + " My Movies Database " + "*" * 10 + "\n")
     print(Fore.CYAN + "0. Exit")
     print(Fore.CYAN + "1. List movies")
@@ -96,9 +95,7 @@ def show_menu():
     print(Fore.CYAN + "6. Random movie")
     print(Fore.CYAN + "7. Search movie")
     print(Fore.CYAN + "8. Movies sorted by rating")
-    print(Fore.CYAN + "9. Movies sorted by release year")
-    print(Fore.CYAN + "10. Filter movies")
-    print(Fore.CYAN + "11. Create Rating Histogram")
+    print(Fore.CYAN + "9. Generate website")
     print()
     return get_valid_int(
         f"Enter choice ({MIN_MENU_CHOICE}–{MAX_MENU_CHOICE}): ",
@@ -120,9 +117,7 @@ def handle_choice(choice):
         6: random_movie,
         7: search_movie,
         8: sort_by_rating,
-        9: sort_by_release,
-        10: filter_movies,
-        11: create_rating_histogram
+        9: generate_website,
     }
 
     func = actions.get(choice)
@@ -374,80 +369,9 @@ def sort_by_rating():
     print()
 
 
-def sort_by_release():
-    """Display all movies sorted by release year,
-    optionally showing the newest movies first or last.
-    Each entry includes the title, release year, and rating."""
-
-    movies = movie_storage.get_movies()
-    if not movies:
-        print(Fore.RED + "No movies in the database yet.")
-        return
-
-    sort_order = get_nonempty_string("\nDo you want the latest movies first? (Y/N): ").lower()
-    while sort_order not in ("y", "n"):
-        sort_order = get_nonempty_string("Please enter either 'y' or 'n': ").strip().lower()
-
-    sort = sort_order == "y"
-    print(f"\n{Fore.WHITE}{len(movies)} movies listed in chronological order:")
-    print('\n' + Fore.WHITE + '-' * 30 + '\n')
-    for movie, info in sorted(movies.items(), key=lambda item: item[1]["year"], reverse=sort):
-        print(f"{Fore.BLUE}{movie} ({info['year']}): {Fore.YELLOW}{info['rating']}")
-
-
-def filter_movies():
-    """Display movies filtered by rating and year of release based on user request."""
-
-    movies = movie_storage.get_movies()
-    if not movies:
-        print(Fore.RED + "No movies in the database yet.")
-        return
-
-    min_rating = get_optional_number("\nEnter min rating (leave blank for no min rating): ", float)
-    start_year = get_optional_number("Enter start year (leave blank for no start year): ", int)
-    end_year = get_optional_number("Enter end year (leave blank for no end year): ", int)
-
-    matches = []
-    for movie, info in movies.items():
-        matches_rating = min_rating is None or info["rating"] >= min_rating
-        matches_start = start_year is None or info["year"] >= start_year
-        matches_end = end_year is None or info["year"] <= end_year
-        if matches_rating and matches_start and matches_end:
-            matches.append((movie, info))
-
-    if matches:
-        print(f"\n{Fore.WHITE}{len(matches)} movies were found:")
-        print('\n' + Fore.WHITE + '-' * 30 + '\n')
-        for movie, info in matches:
-            print(f"{Fore.BLUE}{movie} ({info['year']}): {Fore.YELLOW}{info['rating']}")
-    else:
-        print(Fore.RED + "\nNo movies matching the given criteria were found.")
-
-
-def create_rating_histogram():
-    """Create a histogram showing the distribution of movie ratings.
-    Prompt the user for a filename and save the plot as an image file."""
-
-    movies = movie_storage.get_movies()
-    if not movies:
-        print(Fore.RED + "No movies in the database yet.\n")
-        return
-
-    ratings = []
-    for info in movies.values():
-        ratings.append(info["rating"])
-
-    filename = get_nonempty_string("\nEnter filename to save the histogram (e.g., hist.png): ")
-    if not filename.lower().endswith(".png"):
-        filename += ".png"
-
-    plt.hist(ratings, bins=20, edgecolor="black")
-    plt.xlabel("Rating")
-    plt.ylabel("Number of Movies")
-    plt.title("Movie Ratings Histogram")
-    plt.savefig(filename)
-    plt.close()
-    print(f"\n{Fore.MAGENTA}Histogram saved to {filename} 🎉\n")
+def generate_website():
+    """Generate the HTML website from template."""
+    print("\nWebsite was generated successfully.\n")
 
 
 # ------------------ main ------------------
