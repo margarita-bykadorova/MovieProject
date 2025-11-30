@@ -14,6 +14,7 @@ import difflib
 import matplotlib.pyplot as plt
 from colorama import Fore, init
 import movie_storage_sql as movie_storage
+import movie_api
 init(autoreset=True)
 
 MIN_YEAR = 1900
@@ -166,28 +167,69 @@ def list_movies():
 
 
 def add_movie():
-    """Prompt the user for a new movie's title, release year, and rating.
-    Add new movie to the database if it doesn't already exist."""
-
+    """
+    Add a new movie using the OMDb API.
+    The user only enters the title; year, rating and poster URL are fetched.
+    """
     movies = movie_storage.get_movies()
-    title = get_nonempty_string("\nEnter new movie title: ")
+    title = get_nonempty_string("\nEnter movie title: ")
 
     if title in movies:
         print(Fore.RED + f"\nMovie '{title}' is already in the database.\n")
         return
 
-    year = get_valid_int(
-        f"Enter the year of release ({MIN_YEAR}–{MAX_YEAR}): ",
-        MIN_YEAR,
-        MAX_YEAR
-    )
-    rating = get_valid_float(
-        f"Enter movie rating ({MIN_RATING}–{MAX_RATING}): ",
-        MIN_RATING,
-        MAX_RATING
-    )
-    movie_storage.add_movie(title, year, round(rating, 1))
-    print(Fore.MAGENTA + f"\nMovie '{title}' added successfully 🎉\n")
+    # Try to fetch from API
+    try:
+        data = movie_api.fetch_movie(title)
+    except movie_api.MovieAPIError as e:
+        print(Fore.RED + f"\nCould not reach OMDb API. Please try again later.\nDetails: {e}\n")
+        return
+
+    # Movie not found
+    if data is None:
+        print(Fore.RED + f"\nMovie '{title}' was not found in OMDb.\n")
+        return
+
+    # Use the “official” title from API (correct casing)
+    api_title = data.get("Title", title)
+
+    # Year (string in API)
+    year_str = data.get("Year", "")
+    try:
+        year = int(year_str)
+    except ValueError:
+        year = get_valid_int(
+            f"Could not read year from API. Enter the year ({MIN_YEAR}–{MAX_YEAR}): ",
+            MIN_YEAR,
+            MAX_YEAR
+        )
+
+    # IMDB rating
+    rating_str = data.get("imdbRating", "N/A")
+    if rating_str == "N/A":
+        rating = get_valid_float(
+            f"Could not read rating from API. Enter movie rating ({MIN_RATING}–{MAX_RATING}): ",
+            MIN_RATING,
+            MAX_RATING
+        )
+    else:
+        try:
+            rating = float(rating_str)
+        except ValueError:
+            rating = get_valid_float(
+                f"API rating invalid. Enter movie rating ({MIN_RATING}–{MAX_RATING}): ",
+                MIN_RATING,
+                MAX_RATING
+            )
+
+    # Poster URL
+    poster_url = data.get("Poster")
+    if not poster_url or poster_url == "N/A":
+        poster_url = None  # we can still store movie without poster
+
+    # Save to database (note: add_movie now accepts poster=None by default)
+    movie_storage.add_movie(api_title, year, round(rating, 1), poster_url)
+    print(Fore.MAGENTA + f"\nMovie '{api_title}' added successfully from OMDb 🎉\n")
 
 
 def delete_movie():
