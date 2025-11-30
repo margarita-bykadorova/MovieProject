@@ -369,8 +369,61 @@ def sort_by_rating():
     print()
 
 
+def _generate_movie_grid_html(movies):
+    """
+    Build the HTML for all movies to insert into __TEMPLATE_MOVIE_GRID__.
+    `movies` is the dict returned by movie_storage.get_movies().
+    """
+    items = []
+
+    for title, info in movies.items():
+        year = info["year"]
+        rating = info["rating"]
+        poster_url = info.get("poster") or ""
+
+        item_html = f"""
+        <li>
+            <div class="movie">
+                <img class="movie-poster" src="{poster_url}" alt="Poster for {title}">
+                <div class="movie-title">{title}</div>
+                <div class="movie-year">{year}</div>
+                <div class="movie-year">Rating: {rating}</div>
+            </div>
+        </li>
+        """
+        items.append(item_html)
+
+    return "\n".join(items)
+
+
 def generate_website():
-    """Generate the HTML website from template."""
+    """
+    Generate the HTML website from the template and save it as _static/index.html.
+    """
+    movies = movie_storage.get_movies()
+
+    # 1. Read the template file
+    try:
+        with open("_static/index_template.html", "r", encoding="utf-8") as f:
+            template = f.read()
+    except FileNotFoundError:
+        print("\nTemplate file not found. Make sure _static/index_template.html exists.\n")
+        return
+
+    # 2. Generate the movie grid HTML
+    movie_grid_html = _generate_movie_grid_html(movies)
+
+    # 3. Replace placeholders
+    html_content = (
+        template
+        .replace("__TEMPLATE_TITLE__", "My Movie App")
+        .replace("__TEMPLATE_MOVIE_GRID__", movie_grid_html)
+    )
+
+    # 4. Write the final HTML file into _static/
+    with open("_static/index.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+
     print("\nWebsite was generated successfully.\n")
 
 

@@ -1,6 +1,6 @@
 import requests
 
-API_KEY = "54373471" #"YOUR_KEY_HERE"
+API_KEY = "54373471"
 
 
 class MovieAPIError(Exception):
