@@ -1,6 +1,14 @@
-import requests
+"""OMDb API client used to fetch movie metadata."""
 
-API_KEY = "54373471"
+import os
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv()
+
+# OMDb API key
+API_KEY = os.getenv("OMDB_API_KEY")
 
 
 class MovieAPIError(Exception):
@@ -10,17 +18,22 @@ class MovieAPIError(Exception):
 
 def fetch_movie(title):
     """
-    Fetch a movie from OMDb API by title.
-    Returns a dict with movie data, or None if movie not found.
-    Raises MovieAPIError if the API is not accessible.
+    Fetch a movie from the OMDb API by title.
+
+    Returns:
+        dict: Movie data if found.
+        None: If the movie does not exist in OMDb.
+
+    Raises:
+        MovieAPIError: If the API is not accessible or returns an error.
     """
-    url = f"http://www.omdbapi.com/?apikey={API_KEY}&t={title}"
+    base_url = "http://www.omdbapi.com/"
+    url = f"{base_url}?apikey={API_KEY}&t={title}"
 
     try:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        # Network error, timeout, DNS error, etc.
         raise MovieAPIError(f"Failed to access OMDb API: {e}") from e
 
     data = response.json()

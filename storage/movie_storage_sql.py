@@ -1,11 +1,11 @@
-# movie_storage_sql.py
+"""Database layer for users and movies using SQLite and SQLAlchemy."""
 
 from sqlalchemy import create_engine, text
 
 # Define the database URL
 DB_URL = "sqlite:///data/movies.db"
 
-# Create the engine (echo=True so we see the SQL in the console)
+# Create the engine (echo=False to keep the console output clean)
 engine = create_engine(DB_URL, echo=False)
 
 # Create the table if it does not exist
@@ -30,7 +30,7 @@ with engine.connect() as connection:
             note TEXT,
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE (user_id, title)
-            )
+        )
     """))
 
     connection.commit()
@@ -115,6 +115,7 @@ def add_movie(user_id, title, year, rating, poster=None, note=None):
 
 
 def delete_movie(user_id, title):
+    """Delete a movie for a given user by title."""
     with engine.connect() as connection:
         connection.execute(
             text("DELETE FROM movies WHERE user_id = :uid AND title = :title"),

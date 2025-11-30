@@ -13,9 +13,13 @@ import sys
 import statistics
 import random
 import difflib
+
 from colorama import Fore, init
+
 from storage import movie_storage_sql as movie_storage
 import movie_api
+
+# Initialize Colorama
 init(autoreset=True)
 
 MIN_YEAR = 1900
@@ -27,6 +31,7 @@ MAX_MENU_CHOICE = 9
 
 active_user_id = None
 active_user_name = ""
+
 
 # ------------------ input helpers ------------------
 
@@ -171,6 +176,7 @@ def select_user():
             active_user_name = name
             print(Fore.MAGENTA + f"\nWelcome back, {name}! 🎬\n")
             return
+
 
 # ------------------ movie functions ------------------
 
