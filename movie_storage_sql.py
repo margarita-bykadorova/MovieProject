@@ -53,9 +53,29 @@ def add_movie(title, year, rating):
 
 def delete_movie(title):
     """Delete a movie from the database."""
-    pass  # we'll implement this in the next step
+    with engine.connect() as connection:
+        result = connection.execute(
+            text("DELETE FROM movies WHERE title = :title"),
+            {"title": title}
+        )
+        connection.commit()
+
+        if result.rowcount > 0:
+            print(f"Movie '{title}' deleted successfully.")
+        else:
+            print(f"Movie '{title}' not found.")
 
 
 def update_movie(title, rating):
     """Update a movie's rating in the database."""
-    pass  # we'll implement this in the next step
+    with engine.connect() as connection:
+        result = connection.execute(
+            text("UPDATE movies SET rating = :rating WHERE title = :title"),
+            {"rating": rating, "title": title}
+        )
+        connection.commit()
+
+        if result.rowcount > 0:
+            print(f"Movie '{title}' updated successfully.")
+        else:
+            print(f"Movie '{title}' not found.")
