@@ -13,7 +13,7 @@ import random
 import difflib
 import matplotlib.pyplot as plt
 from colorama import Fore, init
-import movie_storage
+import movie_storage_sql as movie_storage
 init(autoreset=True)
 
 MIN_YEAR = 1900

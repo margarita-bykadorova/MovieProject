@@ -34,6 +34,11 @@ def list_movies():
     return {row[0]: {"year": row[1], "rating": row[2]} for row in movies}
 
 
+def get_movies():
+    """Compatibility wrapper so old code using get_movies() still works."""
+    return list_movies()
+
+
 def add_movie(title, year, rating):
     """Add a new movie to the database."""
     with engine.connect() as connection:
